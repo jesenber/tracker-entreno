@@ -175,59 +175,90 @@ function cleanExerciseName(line){
   return name;
 }
 
-function extractExercisesFromPlan(planText){
-  const text = String(planText||"").replace(/\r/g,"");
-  const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+function extractExercisesFromPlan(planText, tipo=""){
+  const text = String(planText || "")
+    .replace(/\r/g, "")
+    .replaceAll("×", "x");
+
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
   const out = [];
   const seen = new Set();
 
-  const shouldSkip = (low, raw) => {
-    if(low.startsWith("🔹")) return true;
-    if(low.startsWith("⏱") || low.startsWith("📌")) return true;
-    if(low.includes("objetivo")) return true;
-    if(low.startsWith("warm up") || low.startsWith("warm-up")) return true;
-    if(low.startsWith("bloque")) return true;
-    if(low.startsWith("descanso")) return true;
-    if(low.startsWith("finisher")) return true;
-    if(raw.endsWith(":")) return true;
+  const isStrengthDay = /fuerza|gym|push|pull|legs|pierna|torso|full/i.test(tipo || "");
+
+  const hasSetsReps = (line) => /\b\d+\s*x\s*\d+\b/i.test(line);
+
+  const looksLikeCardioWarmup = (line) => {
+    const low = line.toLowerCase();
+
+    // 200 m / 1 km / 10 min / 30s etc
+    const dist = /^\s*\d+([.,]\d+)?\s*(m|km)\b/i.test(low);
+    const time = /^\s*\d+([.,]\d+)?\s*(s|seg|min)\b/i.test(low);
+
+    // palabras típicas de cardio
+    const cardio = /\b(row|remo|run|carrera|bike|airbike|assault|ski|skierg|erg|cinta|treadmill)\b/i.test(low);
+
+    // si es cardio/tiempo/distancia y NO hay 3x5 / 4x10, lo considero warmup/no-gym-log
+    return (dist || time || cardio) && !hasSetsReps(low);
+  };
+
+  const shouldSkip = (line) => {
+    const low = line.toLowerCase();
+    if (low.startsWith("-")) return true;
+    if (low.startsWith("✅") || low.startsWith("*")) return true;
+    if (low.includes("objetivo")) return true;
+    if (low.includes("calentamiento") || low.includes("warm")) return true;
+
+    // clave: si es día fuerza, quita cardio warmups tipo 200m row suave
+    if (isStrengthDay && looksLikeCardioWarmup(line)) return true;
+
     return false;
   };
 
-  for(let i=0;i<lines.length;i++){
-    const raw = lines[i];
-    const low = raw.toLowerCase();
-    if(shouldSkip(low, raw)) continue;
+  for (const raw of lines) {
+    if (shouldSkip(raw)) continue;
 
-    const isWorkItem = /^\d+/.test(raw) && /(m|km|')\b/i.test(raw) && /(run|row|skierg|bike|assault|ski)/i.test(raw);
-    if(isWorkItem){
-      if(!seen.has(raw)){
-        seen.add(raw);
-        out.push({ name: raw, suggestedReps: "" });
-      }
-      continue;
+    let line = raw;
+
+    // Quita numeraciones tipo "1) ..." "1. ..." "A1: ..."
+    line = line.replace(/^\s*\d+[\)\.\-]\s*/g, "");
+    line = line.replace(/^\s*[A-Z]\d+\s*[:\-]\s*/g, "");
+
+    // --- Sets x Reps ---
+    let suggestedSets = null;
+    let suggestedReps = null;
+    const sxr = line.match(/(\d+)\s*x\s*(\d+)(?:\s*[-–]\s*(\d+))?/i);
+    if (sxr) {
+      suggestedSets = Number(sxr[1]);
+      suggestedReps = sxr[3] ? `${sxr[2]}-${sxr[3]}` : Number(sxr[2]);
     }
 
-    const name = cleanExerciseName(raw);
-    if(!name) continue;
-
-    const nameLow = name.toLowerCase();
-    if(nameLow === "core") continue;
-
-    const next = lines[i+1] || "";
-    const hasSetPattern = /(\d+)\s*[x×]\s*\d+/.test(raw) || /(\d+)\s*[x×]\s*\d+/.test(next);
-    const looksLikeName = /^[a-záéíóúüñ]/i.test(name) && name.length <= 45;
-    const isErgoOrMov = /(row|skierg|assault bike|bike|wall balls|sled|run|lunges)/i.test(name);
-
-    if(looksLikeName && (hasSetPattern || isErgoOrMov)){
-      if(seen.has(name)) continue;
-
-      let suggestedReps = "";
-      const m = (raw.match(/(\d+)\s*[x×]\s*(\d+)/) || next.match(/(\d+)\s*[x×]\s*(\d+)/));
-      if(m) suggestedReps = Number(m[2]);
-
-      seen.add(name);
-      out.push({ name, suggestedReps });
+    // --- Rest dentro de la línea (si existe) ---
+    let suggestedRestSec = 0;
+    const restMatch = line.match(/\b(descanso|rest)\s*[:=]?\s*([0-9][0-9'":\s\-]*)/i);
+    if (restMatch && typeof parseRestToSeconds === "function") {
+      suggestedRestSec = parseRestToSeconds(restMatch[2]);
     }
+
+    // --- Limpia nombre (quita sets/reps, kilos, rir/rpe, etc) ---
+    let name = line
+      .split("→")[0]
+      .replace(/\([^)]*\)/g, " ")
+      .replace(/\[[^\]]*\]/g, " ")
+      .replace(/\b\d+\s*x\s*\d+(?:\s*[-–]\s*\d+)?\b/ig, " ")
+      .replace(/\b@?\s*(rir|rpe)\s*[:=]?\s*\d+(\.\d+)?\b/ig, " ")
+      .replace(/\b(\d+([.,]\d+)?)\s*(kg|k)\b/ig, " ")
+      .replace(/\b(descanso|rest)\b.*$/i, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
+    if (!name) continue;
+
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    out.push({ name, suggestedSets, suggestedReps, suggestedRestSec });
   }
 
   return out;
