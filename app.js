@@ -30,6 +30,143 @@ function loadState(){
     return defaultState();
   }
 }
+function formatMMSS(totalSec){
+  const s = Math.max(0, Math.round(totalSec||0));
+  const mm = String(Math.floor(s/60)).padStart(2,"0");
+  const ss = String(s%60).padStart(2,"0");
+  return `${mm}:${ss}`;
+}
+
+function parseRestToSeconds(raw){
+  if(!raw) return 0;
+  let s = String(raw)
+    .toLowerCase()
+    .replaceAll("’","'").replaceAll("´","'")
+    .replaceAll("″","''").replaceAll("”","''").replaceAll("“","''")
+    .replace(/\s+/g," ")
+    .trim();
+
+  // Rango: 60–90'', 60-90 s, 2–3'
+  const r = s.match(/(\d+)\s*[-–]\s*(\d+)\s*('?|''|s|min|m)?/i);
+  if(r){
+    const a = Number(r[1]), b = Number(r[2]);
+    const mid = Math.round((a+b)/2);
+    const unit = (r[3]||"").toLowerCase();
+    if(unit.includes("'") || unit.includes("min") || unit === "m") return mid*60;
+    return mid; // por defecto segundos
+  }
+
+  // mm:ss
+  const mmss = s.match(/(\d+)\s*:\s*(\d+)/);
+  if(mmss) return Number(mmss[1])*60 + Number(mmss[2]);
+
+  // 1'30'' / 2' / 90''
+  const min = s.match(/(\d+)\s*'/);
+  const sec = s.match(/(\d+)\s*(?:''|s)\b/);
+
+  const m = min ? Number(min[1]) : 0;
+  let seconds = sec ? Number(sec[1]) : 0;
+
+  // Caso "1'30" sin '' explícito
+  const loose = s.match(/(\d+)\s*'\s*(\d+)\b/);
+  if(loose){
+    seconds = Number(loose[2]);
+  }
+
+  if(m || seconds) return m*60 + seconds;
+
+  // Si solo hay un número, asumimos segundos
+  const only = s.match(/(\d+)/);
+  return only ? Number(only[1]) : 0;
+}
+function extractRestMapFromPlan(planText){
+  const text = String(planText||"").replace(/\r/g,"");
+  const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+
+  const exs = extractExercisesFromPlan(text).map(e=>e.name);
+  const norm = (x)=> String(x||"").toLowerCase().replace(/\s+/g," ").trim();
+  const exByNorm = new Map(exs.map(n=>[norm(n), n]));
+
+  const restMap = {};
+  let lastExercise = "";
+  let dayDefaultRest = 0;
+
+  for(const raw of lines){
+    // marcar ejercicio actual si la línea coincide con uno detectado
+    const cleaned = cleanExerciseName(raw);
+    const key = exByNorm.get(norm(cleaned));
+    if(key) lastExercise = key;
+
+    // Descanso: 2' / 1'30'' / etc.
+    const m1 = raw.match(/descans[oa]?\s*:?\s*([0-9][^a-z]*)/i);
+    if(m1){
+      const sec = parseRestToSeconds(m1[1]);
+      if(sec){
+        if(lastExercise) restMap[lastExercise] = sec;
+        else dayDefaultRest = sec;
+      }
+    }
+
+    // Descanso entre rondas
+    const m2 = raw.match(/descans[ae]\s*([0-9][^a-z]*)\s*entre\s*rondas/i);
+    if(m2){
+      const sec = parseRestToSeconds(m2[1]);
+      if(sec) dayDefaultRest = sec;
+    }
+  }
+
+  return { restMap, dayDefaultRest };
+}
+let restTimer = { total:0, left:0, t:null, running:false, source:"" };
+
+function setRestUI(seconds, sourceText=""){
+  const clock = document.getElementById("restClock");
+  const src = document.getElementById("restSource");
+  if(clock) clock.textContent = formatMMSS(seconds);
+  if(src) src.textContent = sourceText ? `(${sourceText})` : "";
+}
+
+function stopTimer(){
+  if(restTimer.t) clearInterval(restTimer.t);
+  restTimer.t = null;
+  restTimer.running = false;
+}
+
+function startTimer(seconds, sourceText=""){
+  const sec = Math.max(0, Math.round(seconds||0));
+  if(!sec) return;
+
+  stopTimer();
+  restTimer.total = sec;
+  restTimer.left = sec;
+  restTimer.running = true;
+  restTimer.source = sourceText || restTimer.source || "";
+
+  setRestUI(restTimer.left, restTimer.source);
+
+  restTimer.t = setInterval(()=>{
+    restTimer.left -= 1;
+    setRestUI(restTimer.left, restTimer.source);
+
+    if(restTimer.left <= 0){
+      stopTimer();
+      try{ navigator.vibrate?.([200,80,200]); }catch(e){}
+      try{
+        const ctx = new (window.AudioContext||window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = 880;
+        g.gain.value = 0.05;
+        o.start();
+        setTimeout(()=>{ o.stop(); ctx.close(); }, 250);
+      }catch(e){}
+      const src = document.getElementById("restSource");
+      if(src) src.textContent = "(¡Descanso terminado!)";
+    }
+  }, 1000);
+}
+
 function cleanExerciseName(line){
   let name = line.split("→")[0].trim();
   name = name.replace(/\([^)]*\)/g, "").trim();
@@ -127,6 +264,17 @@ function renderDayExercises(){
       const wInput = document.getElementById("logWeight");
 
       if(exInput) exInput.value = ex.name;
+      const day = document.getElementById("logDay")?.value;
+const plan = state.days?.[day]?.planText || "";
+const { restMap, dayDefaultRest } = extractRestMapFromPlan(plan);
+const sec = (restMap && restMap[ex.name]) ? restMap[ex.name] : (dayDefaultRest || 0);
+
+stopTimer();
+restTimer.total = sec;
+restTimer.left = sec;
+restTimer.source = sec ? "del plan" : "";
+setRestUI(sec, restTimer.source);
+
       if(ex.suggestedReps && repsInput && (repsInput.value === "" || repsInput.value == null)){
         repsInput.value = ex.suggestedReps;
       }
@@ -655,7 +803,29 @@ async function init(){
  document.getElementById("logDay").addEventListener("change", ()=>{
   renderLogs();
   renderDayExercises();
+
+  // --- REST: precarga desde el plan del día ---
+  const day = document.getElementById("logDay").value;
+  const plan = state.days?.[day]?.planText || "";
+  const { restMap, dayDefaultRest } = extractRestMapFromPlan(plan);
+
+  if(state.days?.[day]){
+    state.days[day].restMap = restMap;
+    state.days[day].dayDefaultRest = dayDefaultRest;
+  }
+
+  const ex = document.getElementById("logExercise")?.value || "";
+  const sec = (restMap && restMap[ex]) ? restMap[ex] : (dayDefaultRest || 0);
+
+  stopTimer();
+  restTimer.total = sec;
+  restTimer.left = sec;
+  restTimer.source = sec ? "del plan" : "";
+  setRestUI(sec, restTimer.source);
+
+  saveState();
 });
+
 // Botón "Registrar este día" (desde la vista Semana)
 document.addEventListener("click", (e)=>{
   const btn = e.target.closest(".btnRegisterDay");
@@ -710,6 +880,24 @@ document.addEventListener("click", (e)=>{
     document.getElementById("logRir").value = "";
     document.getElementById("logNotes").value = "";
     renderLogs();
+    // --- REST: auto-start tras registrar una serie ---
+const day2 = document.getElementById("logDay")?.value;
+const ex2 = document.getElementById("logExercise")?.value || "";
+const plan2 = state.days?.[day2]?.planText || "";
+const { restMap: rm2, dayDefaultRest: ddr2 } = extractRestMapFromPlan(plan2);
+const sec2 = (rm2 && rm2[ex2]) ? rm2[ex2] : (ddr2 || 0);
+
+stopTimer();
+restTimer.total = sec2;
+restTimer.left = sec2;
+restTimer.source = sec2 ? "auto (plan)" : "";
+setRestUI(sec2, restTimer.source);
+
+// si hay descanso, arráncalo
+if(sec2 > 0){
+  startTimer();
+}
+
   });
 
   document.getElementById("btnClearLogs").addEventListener("click", ()=>{
@@ -792,5 +980,37 @@ document.addEventListener("click", (e)=>{
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   }
 }
+// --- REST TIMER UI ---
+const autoToggle = document.getElementById("autoRestToggle");
+const btnStart = document.getElementById("restStart");
+const btnPause = document.getElementById("restPause");
+const btnReset = document.getElementById("restReset");
+
+if(!state.settings) state.settings = {};
+if(state.settings.autoRest == null) state.settings.autoRest = true;
+
+if(autoToggle){
+  autoToggle.checked = !!state.settings.autoRest;
+  autoToggle.addEventListener("change", ()=>{
+    state.settings.autoRest = autoToggle.checked;
+    saveState();
+  });
+}
+
+if(btnStart){
+  btnStart.addEventListener("click", ()=>{
+    const txt = document.getElementById("restClock")?.textContent || "0:00";
+    const sec = restTimer.total || parseRestToSeconds(txt);
+    startTimer(sec, "manual");
+  });
+}
+
+if(btnPause) btnPause.addEventListener("click", ()=> stopTimer());
+
+if(btnReset) btnReset.addEventListener("click", ()=>{
+  stopTimer();
+  restTimer.left = restTimer.total || 0;
+  setRestUI(restTimer.left, restTimer.source);
+});
 
 init();
