@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tracker Entreno + Menú</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🏋️‍♂️</div>
+      <div>
+        <div class="title">Tracker Entreno + Menú</div>
+        <div class="subtitle">Semana, registro en gym y resumen para tu entrenador</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-view="semana">Semana</button>
+      <button class="tab" data-view="registrar">Registrar</button>
+      <button class="tab" data-view="resumen">Resumen</button>
+      <button class="tab" data-view="ajustes">Ajustes</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- SEMANA -->
+    <section id="view-semana" class="view">
+      <div class="card">
+        <h2>Importar planificación semanal (pega el WhatsApp)</h2>
+        <p class="muted">Pega el texto tal cual. Se separará por días y se intentará detectar el tipo (Fuerza/Carrera/Hyrox…). Luego puedes corregirlo con el desplegable.</p>
+        <textarea id="weeklyText" rows="10" placeholder="Pega aquí el mensaje semanal..."></textarea>
+        <div class="row">
+          <button id="btnImport" class="primary">Importar semana</button>
+          <button id="btnResetWeek" class="ghost">Vaciar semana</button>
+          <div class="spacer"></div>
+          <button id="btnCopyCoach" class="ghost">Copiar resumen para entrenador</button>
+        </div>
+      </div>
+
+      <div id="weekGrid" class="grid"></div>
+    </section>
+
+    <!-- REGISTRAR -->
+    <section id="view-registrar" class="view hidden">
+      <div class="card">
+        <h2>Registrar series/pesos (modo gym)</h2>
+        <div class="formgrid">
+          <label>
+            Día
+            <select id="logDay"></select>
+          </label>
+          <label>
+            Ejercicio
+            <input id="logExercise" placeholder="Back Squat, RDL, SkiErg..." />
+          </label>
+          <label>
+            Reps
+            <input id="logReps" type="number" inputmode="numeric" />
+          </label>
+          <label>
+            Peso
+            <input id="logWeight" type="number" step="0.5" inputmode="decimal" />
+          </label>
+          <label>
+            RIR (opcional)
+            <input id="logRir" type="number" inputmode="numeric" />
+          </label>
+          <label class="span2">
+            Notas (opcional)
+            <input id="logNotes" placeholder="RPE, sensaciones, molestias..." />
+          </label>
+        </div>
+        <div class="row">
+          <button id="btnAddLog" class="primary">Añadir</button>
+          <button id="btnClearLogs" class="ghost">Borrar registros</button>
+          <div class="spacer"></div>
+          <button id="btnExportLogs" class="ghost">Exportar CSV</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Registros</h3>
+        <div id="logsList" class="list"></div>
+      </div>
+    </section>
+
+    <!-- RESUMEN -->
+    <section id="view-resumen" class="view hidden">
+      <div class="card">
+        <h2>Resumen</h2>
+        <p class="muted">Esto se genera a partir de tus checks y registros. Si rellenas Kcal/Prot/Carb/Grasa en el menú base, también te sumará macros.</p>
+        <div class="row">
+          <button id="btnRefreshSummary" class="primary">Actualizar resumen</button>
+          <button id="btnCopySummary" class="ghost">Copiar</button>
+        </div>
+        <textarea id="summaryText" rows="16" readonly></textarea>
+      </div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section id="view-ajustes" class="view hidden">
+      <div class="card">
+        <h2>Ajustes / Copias de seguridad</h2>
+        <p class="muted">Tus datos se guardan en este dispositivo (localStorage). Puedes exportar/importar un backup.</p>
+
+        <div class="row">
+          <button id="btnExportBackup" class="primary">Exportar backup (.json)</button>
+          <label class="filebtn">
+            Importar backup
+            <input id="fileImportBackup" type="file" accept="application/json" />
+          </label>
+          <div class="spacer"></div>
+          <button id="btnWipeAll" class="danger">Borrar todo</button>
+        </div>
+
+        <hr />
+
+        <h3>Tipos de día</h3>
+        <p class="muted">Estos son los tipos que conectan con tu menú base.</p>
+        <ul id="typesList"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span class="muted">Gratis · Sin cuenta · Funciona en PC y móvil</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

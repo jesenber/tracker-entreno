@@ -1,0 +1,352 @@
+{
+  "Fuerza": {
+    "Desayuno": [
+      {
+        "tipo": "Fuerza",
+        "momento": "Desayuno",
+        "opcion": 1,
+        "texto": "- 1 tostada pan integral\n- 2 huevos enteros + 2 claras\n- ½ aguacate pequeño\n- 1 café",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Comida": [
+      {
+        "tipo": "Fuerza",
+        "momento": "Comida",
+        "opcion": 1,
+        "texto": "- 80 g arroz jazmín cocido\n- 150 g pollo\n- 1 cda aceite de oliva\n- Verdura ligera (100 g máx.)\n- 1 fruta (kiwi o mandarina)",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Merienda": [
+      {
+        "tipo": "Fuerza",
+        "momento": "Merienda",
+        "opcion": 1,
+        "texto": "- Batido: 30 g proteína whey + 30 g avena + 5 g creatina",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Cena": [
+      {
+        "tipo": "Fuerza",
+        "momento": "Cena",
+        "opcion": 1,
+        "texto": "- 150 g pescado blanco\n- 100 g patata cocida o boniato\n- Verdura al vapor\n- 1 yogur natural",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ]
+  },
+  "Carrera": {
+    "Desayuno": [
+      {
+        "tipo": "Carrera",
+        "momento": "Desayuno",
+        "opcion": 1,
+        "texto": "- 2 tostadas pan integral\n- 2 huevos enteros\n- ½ aguacate pequeño\n- 1 café",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Comida": [
+      {
+        "tipo": "Carrera",
+        "momento": "Comida",
+        "opcion": 1,
+        "texto": "- 80 g pasta integral\n- 150 g pavo o salmón\n- 1 cda aceite de oliva\n- Verdura ligera\n- 1 fruta pequeña",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Merienda": [
+      {
+        "tipo": "Carrera",
+        "momento": "Merienda",
+        "opcion": 1,
+        "texto": "- Batido: 30 g proteína + 1 plátano + 5 g creatina",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Cena": [
+      {
+        "tipo": "Carrera",
+        "momento": "Cena",
+        "opcion": 1,
+        "texto": "- 3 claras + 2 huevos\n- 1 tostada integral\n- Verduras asadas\n- 1 yogur griego",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ]
+  },
+  "Fuerza+Cardio": {
+    "Desayuno": [
+      {
+        "tipo": "Fuerza+Cardio",
+        "momento": "Desayuno",
+        "opcion": 1,
+        "texto": "- 2 tostadas pan integral\n- 2 huevos enteros + 2 claras\n- ½ aguacate",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Comida": [
+      {
+        "tipo": "Fuerza+Cardio",
+        "momento": "Comida",
+        "opcion": 1,
+        "texto": "- 100 g arroz basmati cocido\n- 150 g pollo o ternera magra\n- 1 cda aceite de oliva\n- Verdura ligera (pimiento + cebolla)",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Merienda": [
+      {
+        "tipo": "Fuerza+Cardio",
+        "momento": "Merienda",
+        "opcion": 1,
+        "texto": "- Batido: 30 g proteína + 25 g avena + 5 g creatina",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Cena": [
+      {
+        "tipo": "Fuerza+Cardio",
+        "momento": "Cena",
+        "opcion": 1,
+        "texto": "- 150 g salmón\n- 100 g puré de patata\n- Verdura al vapor\n- 1 yogur griego",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ]
+  },
+  "Acondicionamiento": {
+    "Desayuno": [
+      {
+        "tipo": "Acondicionamiento",
+        "momento": "Desayuno",
+        "opcion": 1,
+        "texto": "- 1 tostada pan integral\n- 2 huevos + 2 claras\n- 1 café",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Comida": [
+      {
+        "tipo": "Acondicionamiento",
+        "momento": "Comida",
+        "opcion": 1,
+        "texto": "- 80 g couscous\n- 150 g pavo o atún natural\n- 1 cda aceite de oliva\n- Ensalada ligera\n- 1 fruta pequeña",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Merienda": [
+      {
+        "tipo": "Acondicionamiento",
+        "momento": "Merienda",
+        "opcion": 1,
+        "texto": "- Batido: 30 g proteína + 1 cdita mantequilla de cacahuete + 5 g creatina",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Cena": [
+      {
+        "tipo": "Acondicionamiento",
+        "momento": "Cena",
+        "opcion": 1,
+        "texto": "- 150 g pescado blanco\n- 100 g boniato\n- Verdura al vapor\n- 1 yogur natural",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ]
+  },
+  "Hyrox": {
+    "Desayuno": [
+      {
+        "tipo": "Hyrox",
+        "momento": "Desayuno",
+        "opcion": 1,
+        "texto": "- 2 tostadas integrales\n- 2 huevos enteros + 2 claras\n- 1 café",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Comida": [
+      {
+        "tipo": "Hyrox",
+        "momento": "Comida",
+        "opcion": 1,
+        "texto": "- 100 g arroz jazmín cocido\n- 150 g pollo o pavo\n- Verdura ligera\n- 1 kiwi",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Merienda": [
+      {
+        "tipo": "Hyrox",
+        "momento": "Merienda",
+        "opcion": 1,
+        "texto": "- Batido: 30 g proteína + 1 plátano + 5 g creatina",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Cena": [
+      {
+        "tipo": "Hyrox",
+        "momento": "Cena",
+        "opcion": 1,
+        "texto": "- 150 g bacalao\n- 100 g patata cocida\n- 1 yogur griego",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ]
+  },
+  "Suave/Activo": {
+    "Desayuno": [
+      {
+        "tipo": "Suave/Activo",
+        "momento": "Desayuno",
+        "opcion": 1,
+        "texto": "- 2 tostadas pan integral\n- 2 huevos\n- 1 fruta pequeña",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Comida": [
+      {
+        "tipo": "Suave/Activo",
+        "momento": "Comida",
+        "opcion": 1,
+        "texto": "- 100 g pasta integral\n- 150 g pollo\n- 1 cda aceite de oliva\n- Verdura ligera",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Merienda": [
+      {
+        "tipo": "Suave/Activo",
+        "momento": "Merienda",
+        "opcion": 1,
+        "texto": "- Batido: 25 g proteína + 1 fruta",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Cena": [
+      {
+        "tipo": "Suave/Activo",
+        "momento": "Cena",
+        "opcion": 1,
+        "texto": "- 150 g pescado blanco\n- Verdura al vapor\n- 1 yogur natural",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ]
+  },
+  "Descanso": {
+    "Desayuno": [
+      {
+        "tipo": "Descanso",
+        "momento": "Desayuno",
+        "opcion": 1,
+        "texto": "- 2 tostadas pan integral\n- 2 huevos\n- ½ aguacate",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Comida": [
+      {
+        "tipo": "Descanso",
+        "momento": "Comida",
+        "opcion": 1,
+        "texto": "- 100 g arroz o patata\n- 150 g carne magra\n- Verdura ligera\n- 1 fruta",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Merienda": [
+      {
+        "tipo": "Descanso",
+        "momento": "Merienda",
+        "opcion": 1,
+        "texto": "- Batido: 25 g proteína + 5 g creatina",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ],
+    "Cena": [
+      {
+        "tipo": "Descanso",
+        "momento": "Cena",
+        "opcion": 1,
+        "texto": "- 150 g salmón\n- Verdura al vapor\n- 1 yogur natural",
+        "kcal": null,
+        "prot": null,
+        "carb": null,
+        "grasa": null
+      }
+    ]
+  }
+}
