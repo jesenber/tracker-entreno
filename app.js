@@ -55,6 +55,107 @@ function parseRestToSeconds(raw){
     if(unit.includes("'") || unit.includes("min") || unit === "m") return mid*60;
     return mid; // por defecto segundos
   }
+// === SERIES HINT (Objetivo de series/reps/peso/descanso) ===
+function normalizeKey(s){
+  return String(s||"")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")  // quita acentos
+    .replace(/[^a-z0-9]+/g," ")
+    .trim();
+}
+
+function findLineForExercise(planText, exName){
+  const target = normalizeKey(exName);
+  if(!target) return "";
+  const lines = String(planText||"").split("\n");
+
+  for(const line of lines){
+    const n = normalizeKey(line);
+    if(!n) continue;
+    if(n.includes(target)) return line.trim();
+  }
+  return "";
+}
+
+function parsePrescriptionFromLine(line){
+  const out = { sets:null, reps:null, weight:null, rir:null, restSec:null };
+  const l = String(line||"");
+
+  // 4x5 / 4 x 5 / 4×5
+  let m = l.match(/(\d+)\s*[x×]\s*(\d+(?:\s*-\s*\d+)?)/i);
+  if(m){
+    out.sets = Number(m[1]);
+    out.reps = m[2].replace(/\s+/g,"");
+  }
+
+  // "3 series de 8"
+  if(!out.sets || !out.reps){
+    m = l.match(/(\d+)\s*(?:series|sets)\s*(?:de)?\s*(\d+(?:\s*-\s*\d+)?)/i);
+    if(m){
+      out.sets = Number(m[1]);
+      out.reps = m[2].replace(/\s+/g,"");
+    }
+  }
+
+  // "8-12 reps"
+  if(!out.reps){
+    m = l.match(/(\d+(?:\s*-\s*\d+)?)\s*(?:reps|rep|repeticiones)\b/i);
+    if(m) out.reps = m[1].replace(/\s+/g,"");
+  }
+
+  // peso: 80kg / 80 kg
+  m = l.match(/(\d+(?:[.,]\d+)?)\s*(?:kg|kgs|kilo|kilos)\b/i);
+  if(m) out.weight = m[1].replace(",",".") + " kg";
+
+  // RIR
+  m = l.match(/\bRIR\s*([0-9]+(?:\s*-\s*[0-9]+)?)\b/i);
+  if(m) out.rir = m[1].replace(/\s+/g,"");
+
+  // descanso: "descanso 2'" / "rest 90s" / "(2')"
+  m = l.match(/(?:descanso|rest)\s*[:\-]?\s*([0-9]+(?:\s*-\s*[0-9]+)?\s*(?:'|"|min|m|s|seg|segundos)?)\b/i);
+  let restRaw = m ? m[1] : null;
+  if(!restRaw){
+    const p = l.match(/\(([^)]*(?:'|"|min|seg|s)[^)]*)\)/i);
+    if(p) restRaw = p[1];
+  }
+  if(restRaw) out.restSec = parseRestToSeconds(restRaw);
+
+  return out;
+}
+
+function buildSeriesHint(p){
+  const parts = [];
+  if(p.sets && p.reps) parts.push(`${p.sets}x${p.reps}`);
+  else if(p.reps) parts.push(`${p.reps} reps`);
+  if(p.weight) parts.push(p.weight);
+  if(p.rir) parts.push(`RIR ${p.rir}`);
+  if(p.restSec) parts.push(`descanso ${formatMMSS(p.restSec)}`);
+  return parts.join(" • ");
+}
+
+function updateSeriesHint(){
+  const hintEl = document.getElementById("logSeriesHint");
+  if(!hintEl) return;
+
+  const day = document.getElementById("logDay")?.value || "";
+  const ex  = document.getElementById("logExercise")?.value || "";
+  const plan = state?.days?.[day]?.planText || "";
+
+  if(!day || !ex || !plan){
+    hintEl.textContent = "";
+    return;
+  }
+
+  const line = findLineForExercise(plan, ex);
+  if(!line){
+    hintEl.textContent = "";
+    return;
+  }
+
+  const p = parsePrescriptionFromLine(line);
+  const hint = buildSeriesHint(p);
+  hintEl.textContent = hint ? `Objetivo: ${hint}` : "";
+}
 
   // mm:ss
   const mmss = s.match(/(\d+)\s*:\s*(\d+)/);
