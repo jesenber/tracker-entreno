@@ -146,3 +146,13 @@ button.ghost{background:transparent}
 
 .chipbtn:hover{ box-shadow: var(--shadow-2); }
 .chipbtn:active{ transform: translateY(1px); }
+.restClock{
+  font-size: 40px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  text-align: center;
+  background: rgba(246,247,251,.9);
+}
