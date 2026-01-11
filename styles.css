@@ -185,6 +185,6 @@ button.ghost{background:transparent}
   color: inherit !important;
 }
 #restTime{
-  color: inherit;
   background: rgba(255,255,255,.06);
+  color: inherit;
 }
