@@ -30,6 +30,111 @@ function loadState(){
     return defaultState();
   }
 }
+function cleanExerciseName(line){
+  let name = line.split("→")[0].trim();
+  name = name.replace(/\([^)]*\)/g, "").trim();
+  name = name.replace(/^[•\-–—\s]+/,"").trim();
+  name = name.replace(/\s{2,}/g," ");
+  return name;
+}
+
+function extractExercisesFromPlan(planText){
+  const text = String(planText||"").replace(/\r/g,"");
+  const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+  const out = [];
+  const seen = new Set();
+
+  const shouldSkip = (low, raw) => {
+    if(low.startsWith("🔹")) return true;
+    if(low.startsWith("⏱") || low.startsWith("📌")) return true;
+    if(low.includes("objetivo")) return true;
+    if(low.startsWith("warm up") || low.startsWith("warm-up")) return true;
+    if(low.startsWith("bloque")) return true;
+    if(low.startsWith("descanso")) return true;
+    if(low.startsWith("finisher")) return true;
+    if(raw.endsWith(":")) return true;
+    return false;
+  };
+
+  for(let i=0;i<lines.length;i++){
+    const raw = lines[i];
+    const low = raw.toLowerCase();
+    if(shouldSkip(low, raw)) continue;
+
+    const isWorkItem = /^\d+/.test(raw) && /(m|km|')\b/i.test(raw) && /(run|row|skierg|bike|assault|ski)/i.test(raw);
+    if(isWorkItem){
+      if(!seen.has(raw)){
+        seen.add(raw);
+        out.push({ name: raw, suggestedReps: "" });
+      }
+      continue;
+    }
+
+    const name = cleanExerciseName(raw);
+    if(!name) continue;
+
+    const nameLow = name.toLowerCase();
+    if(nameLow === "core") continue;
+
+    const next = lines[i+1] || "";
+    const hasSetPattern = /(\d+)\s*[x×]\s*\d+/.test(raw) || /(\d+)\s*[x×]\s*\d+/.test(next);
+    const looksLikeName = /^[a-záéíóúüñ]/i.test(name) && name.length <= 45;
+    const isErgoOrMov = /(row|skierg|assault bike|bike|wall balls|sled|run|lunges)/i.test(name);
+
+    if(looksLikeName && (hasSetPattern || isErgoOrMov)){
+      if(seen.has(name)) continue;
+
+      let suggestedReps = "";
+      const m = (raw.match(/(\d+)\s*[x×]\s*(\d+)/) || next.match(/(\d+)\s*[x×]\s*(\d+)/));
+      if(m) suggestedReps = Number(m[2]);
+
+      seen.add(name);
+      out.push({ name, suggestedReps });
+    }
+  }
+
+  return out;
+}
+
+function renderDayExercises(){
+  const daySel = document.getElementById("logDay");
+  const label = document.getElementById("logDayLabel");
+  const wrap = document.getElementById("dayExercises");
+  if(!daySel || !wrap) return;
+
+  const day = daySel.value;
+  if(label) label.textContent = day || "";
+
+  wrap.innerHTML = "";
+  if(!day) return;
+
+  const plan = state.days?.[day]?.planText || "";
+  const exs = extractExercisesFromPlan(plan);
+
+  if(!exs.length){
+    wrap.innerHTML = `<span class="muted">No detecté ejercicios todavía. Pega/edita el entreno en “Semana”.</span>`;
+    return;
+  }
+
+  for(const ex of exs){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chipbtn";
+    b.textContent = ex.name;
+    b.addEventListener("click", ()=>{
+      const exInput = document.getElementById("logExercise");
+      const repsInput = document.getElementById("logReps");
+      const wInput = document.getElementById("logWeight");
+
+      if(exInput) exInput.value = ex.name;
+      if(ex.suggestedReps && repsInput && (repsInput.value === "" || repsInput.value == null)){
+        repsInput.value = ex.suggestedReps;
+      }
+      if(wInput) wInput.focus();
+    });
+    wrap.appendChild(b);
+  }
+}
 
 function saveState(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -214,9 +319,15 @@ function renderWeek(){
     const plan = document.createElement("div");
     plan.className = "section";
     plan.innerHTML = `
-      <div class="muted" style="margin-bottom:6px">Entrenamiento (pega aquí / edita)</div>
-      <textarea data-day="${day}" class="planText" rows="6" placeholder="Entreno...">${escapeHtml(d.planText||"")}</textarea>
-    `;
+  <div class="muted" style="margin-bottom:6px">Entrenamiento (pega aquí / edita)</div>
+  <textarea data-day="${day}" class="planText" rows="6" placeholder="Entreno...">${escapeHtml(d.planText||"")}</textarea>
+
+  <div class="row">
+    <button type="button" class="primary btnRegisterDay" data-day="${day}">Registrar este día</button>
+    <span class="muted">Abre modo gym con ejercicios detectados</span>
+  </div>
+`;
+
     card.appendChild(plan);
 
     // menu
@@ -541,7 +652,32 @@ async function init(){
   });
 
   // Registrar actions
-  document.getElementById("logDay").addEventListener("change", ()=> renderLogs());
+ document.getElementById("logDay").addEventListener("change", ()=>{
+  renderLogs();
+  renderDayExercises();
+});
+// Botón "Registrar este día" (desde la vista Semana)
+document.addEventListener("click", (e)=>{
+  const btn = e.target.closest(".btnRegisterDay");
+  if(!btn) return;
+
+  const day = btn.dataset.day;
+  if(!day) return;
+
+  setView("registrar");
+
+  const logDay = document.getElementById("logDay");
+  if(logDay) logDay.value = day;
+
+  renderLogs();
+  renderDayExercises();
+
+  const wInput = document.getElementById("logWeight");
+  if(wInput) wInput.focus();
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
 
   document.getElementById("btnAddLog").addEventListener("click", ()=>{
     const day = document.getElementById("logDay").value;
