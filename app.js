@@ -957,6 +957,32 @@ async function init(){
 
   saveState();
 });
+document.getElementById("logExercise").addEventListener("input", ()=>{
+  const day = document.getElementById("logDay").value;
+  if(!day) return;
+
+  // si no tenemos restMap precalculado, lo calculamos desde el plan
+  if(!state.days?.[day]?.restMap){
+    const plan = state.days?.[day]?.planText || "";
+    const { restMap, dayDefaultRest } = extractRestMapFromPlan(plan);
+    state.days[day].restMap = restMap;
+    state.days[day].dayDefaultRest = dayDefaultRest;
+    saveState();
+  }
+
+  const ex = document.getElementById("logExercise").value.trim();
+  const restMap = state.days?.[day]?.restMap || null;
+  const dayDefaultRest = state.days?.[day]?.dayDefaultRest || 0;
+
+  const sec = (restMap && restMap[ex]) ? restMap[ex] : (dayDefaultRest || 0);
+
+  stopTimer();
+  restTimer.total = sec;
+  restTimer.left = sec;
+  restTimer.source = sec ? "del plan" : "";
+
+  setRestUI(sec, restTimer.source);
+});
 
 // Botón "Registrar este día" (desde la vista Semana)
 document.addEventListener("click", (e)=>{
@@ -1037,6 +1063,11 @@ if(sec2 > 0){
     state.logs = [];
     saveState();
     renderLogs();
+    const auto = document.getElementById("restAuto");
+if(auto && auto.checked && restTimer.total > 0){
+  startTimer();
+}
+
   });
 
   document.getElementById("btnExportLogs").addEventListener("click", ()=>{
