@@ -181,31 +181,27 @@ function updateSeriesHint(){
   return only ? Number(only[1]) : 0;
 }
 function extractRestMapFromPlan(planText){
-  const text = String(planText||"").replace(/\r/g,"");
-  const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
-
-  const exs = extractExercisesFromPlan(text).map(e=>e.name);
-  const norm = (x)=> String(x||"").toLowerCase().replace(/\s+/g," ").trim();
-  const exByNorm = new Map(exs.map(n=>[norm(n), n]));
+  const exs = extractExercisesFromPlan(planText);
 
   const restMap = {};
-  let lastExercise = "";
+  const freq = new Map();
+
+  for(const ex of exs){
+    if(ex.restSec && ex.restSec > 0){
+      restMap[ex.name] = ex.restSec;
+      freq.set(ex.restSec, (freq.get(ex.restSec)||0) + 1);
+    }
+  }
+
+  // descanso por defecto = el descanso más repetido del día
   let dayDefaultRest = 0;
+  if(freq.size){
+    dayDefaultRest = [...freq.entries()].sort((a,b)=>b[1]-a[1])[0][0];
+  }
 
-  for(const raw of lines){
-    // marcar ejercicio actual si la línea coincide con uno detectado
-    const cleaned = cleanExerciseName(raw);
-    const key = exByNorm.get(norm(cleaned));
-    if(key) lastExercise = key;
+  return { restMap, dayDefaultRest };
+}
 
-    // Descanso: 2' / 1'30'' / etc.
-    const m1 = raw.match(/descans[oa]?\s*:?\s*([0-9][^a-z]*)/i);
-    if(m1){
-      const sec = parseRestToSeconds(m1[1]);
-      if(sec){
-        if(lastExercise) restMap[lastExercise] = sec;
-        else dayDefaultRest = sec;
-      }
     }
 
     // Descanso entre rondas
@@ -276,63 +272,205 @@ function cleanExerciseName(line){
   return name;
 }
 
-function extractExercisesFromPlan(planText, tipo=""){
-  const text = String(planText || "")
-    .replace(/\r/g, "")
-    .replaceAll("×", "x");
+function normalizePlanText(t){
+  return String(t||"")
+    .replace(/\r/g,"")
+    .replace(/[×]/g,"x")
+    .replace(/[–—]/g,"-")
+    .replace(/[’‘]/g,"'")
+    .replace(/[“”]/g,'"');
+}
 
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+function parseSchemeHint(s){
+  if(!s) return null;
+  const txt = String(s).trim();
+
+  // 4x5 @ 75-80%  |  3x6 | 3x8/8 (moderado)
+  const m = txt.match(/(\d+)\s*[x]\s*(\d+(?:\/\d+)?)\s*(.*)$/i);
+  if(m){
+    const sets = Number(m[1]);
+    const reps = m[2].replace(/\s+/g,"");
+    const tail = (m[3]||"").trim();
+    const schemeHint = `${sets}x${reps}${tail ? " " + tail : ""}`.trim();
+    const autoReps = reps.includes("/") ? null : Number(reps);
+    return { schemeHint, autoReps: Number.isFinite(autoReps) ? autoReps : null };
+  }
+
+  // casos tipo: "10/10" o "30''/lado"
+  const m2 = txt.match(/(\d+\s*\/\s*\d+|\d+\s*''(?:\/[a-záéíóúñ]+)?)/i);
+  if(m2){
+    return { schemeHint: m2[1].replace(/\s+/g,""), autoReps: null };
+  }
+
+  return null;
+}
+
+function extractExercisesFromPlan(planText){
+  const text = normalizePlanText(planText);
+  const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+
   const out = [];
-  const seen = new Set();
+  const byKey = new Map();
 
-  const isStrengthDay = /fuerza|gym|push|pull|legs|pierna|torso|full/i.test(tipo || "");
+  let mode = "main";      // warmup | main | core
+  let lastEx = null;      // último ejercicio detectado (para asociar scheme/RPE/descanso)
+  let coreBuffer = [];    // ejercicios core pendientes de "→ 3 rondas"
 
-  const hasSetsReps = (line) => /\b\d+\s*x\s*\d+\b/i.test(line);
+  function upsert(name, patch={}){
+    if(!name) return;
+    const key = name.toLowerCase();
+    let ex = byKey.get(key);
+    if(!ex){
+      ex = { name, schemeHint:"", autoReps:null, restSec:0 };
+      byKey.set(key, ex);
+      out.push(ex);
+    }
+    Object.assign(ex, patch);
+  }
 
-  const looksLikeCardioWarmup = (line) => {
-    const low = line.toLowerCase();
+  function isSkippableLine(l){
+    const low = l.toLowerCase();
 
-    // 200 m / 1 km / 10 min / 30s etc
-    const dist = /^\s*\d+([.,]\d+)?\s*(m|km)\b/i.test(low);
-    const time = /^\s*\d+([.,]\d+)?\s*(s|seg|min)\b/i.test(low);
+    // cabeceras / meta
+    if(low.startsWith("🔹")) return true;
+    if(low.startsWith("objetivo:")) return true;
+    if(low.startsWith("warm up")) return true;
+    if(low.startsWith("warmup")) return true;
+    if(low.startsWith("⏱")) return true;
+    if(low.startsWith("bloque")) return true;
 
-    // palabras típicas de cardio
-    const cardio = /\b(row|remo|run|carrera|bike|airbike|assault|ski|skierg|erg|cinta|treadmill)\b/i.test(low);
-
-    // si es cardio/tiempo/distancia y NO hay 3x5 / 4x10, lo considero warmup/no-gym-log
-    return (dist || time || cardio) && !hasSetsReps(low);
-  };
-
-  const shouldSkip = (line) => {
-    const low = line.toLowerCase();
-    if (low.startsWith("-")) return true;
-    if (low.startsWith("✅") || low.startsWith("*")) return true;
-    if (low.includes("objetivo")) return true;
-    if (low.includes("calentamiento") || low.includes("warm")) return true;
-
-    // clave: si es día fuerza, quita cardio warmups tipo 200m row suave
-    if (isStrengthDay && looksLikeCardioWarmup(line)) return true;
+    // cosas de lista tipo "2-3 rondas:" o "2–3 rondas:"
+    if(/rondas\s*:\s*$/i.test(l)) return true;
 
     return false;
-  };
+  }
 
-  for (const raw of lines) {
-    if (shouldSkip(raw)) continue;
+  for(let i=0;i<lines.length;i++){
+    const line = lines[i];
+    const low = line.toLowerCase();
 
-    let line = raw;
-
-    // Quita numeraciones tipo "1) ..." "1. ..." "A1: ..."
-    line = line.replace(/^\s*\d+[\)\.\-]\s*/g, "");
-    line = line.replace(/^\s*[A-Z]\d+\s*[:\-]\s*/g, "");
-
-    // --- Sets x Reps ---
-    let suggestedSets = null;
-    let suggestedReps = null;
-    const sxr = line.match(/(\d+)\s*x\s*(\d+)(?:\s*[-–]\s*(\d+))?/i);
-    if (sxr) {
-      suggestedSets = Number(sxr[1]);
-      suggestedReps = sxr[3] ? `${sxr[2]}-${sxr[3]}` : Number(sxr[2]);
+    // modo warmup/core/main
+    if(low.startsWith("warm up") || low.startsWith("warmup")){
+      mode = "warmup";
+      lastEx = null;
+      continue;
     }
+    if(low.startsWith("bloque")){
+      mode = "main";
+      lastEx = null;
+      continue;
+    }
+    if(low.startsWith("core")){
+      mode = "core";
+      coreBuffer = [];
+      lastEx = null;
+      continue;
+    }
+
+    // si estamos en warmup, ignoramos hasta que empiece un bloque
+    if(mode === "warmup"){
+      continue;
+    }
+
+    // línea "→ 3 rondas" aplica al core anterior
+    const rondas = line.match(/^→\s*(\d+)\s*rondas?/i);
+    if(rondas && mode === "core"){
+      const n = Number(rondas[1]);
+      for(const name of coreBuffer){
+        const key = name.toLowerCase();
+        const ex = byKey.get(key);
+        if(ex){
+          // si ya tenía reps, lo dejamos y añadimos rondas
+          ex.schemeHint = ex.schemeHint
+            ? `${ex.schemeHint} · ${n} rondas`
+            : `${n} rondas`;
+        }
+      }
+      continue;
+    }
+
+    if(isSkippableLine(line)) continue;
+
+    // Descanso: 2'  |  Descanso: 1'30''
+    if(low.startsWith("descanso")){
+      const raw = line.split(":").slice(1).join(":").trim();
+      const sec = parseRestToSeconds(raw);
+      if(lastEx && sec>0){
+        const key = lastEx.toLowerCase();
+        const ex = byKey.get(key);
+        if(ex) ex.restSec = sec;
+      }
+      continue;
+    }
+
+    // RPE 7-8
+    if(low.startsWith("rpe")){
+      if(lastEx){
+        const key = lastEx.toLowerCase();
+        const ex = byKey.get(key);
+        if(ex){
+          ex.schemeHint = ex.schemeHint
+            ? `${ex.schemeHint} · ${line.trim()}`
+            : `${line.trim()}`;
+        }
+      }
+      continue;
+    }
+
+    // Caso con flecha: "Bulgarian Split Squat → 3x8/8 (moderado)"
+    if(line.includes("→") || line.includes("->")){
+      const parts = line.split(/→|->/);
+      const left = parts[0].trim();
+      const right = parts.slice(1).join(" ").trim();
+
+      const name = cleanExerciseName(left);
+      if(!name) continue;
+
+      upsert(name);
+      lastEx = name;
+
+      const sch = parseSchemeHint(right);
+      if(sch){
+        const key = name.toLowerCase();
+        const ex = byKey.get(key);
+        if(ex){
+          if(sch.schemeHint) ex.schemeHint = sch.schemeHint;
+          if(sch.autoReps != null) ex.autoReps = sch.autoReps;
+        }
+      }
+      if(mode === "core") coreBuffer.push(name);
+      continue;
+    }
+
+    // Si la línea es un "scheme" y tenemos lastEx: 4x5 @...
+    const schLine = parseSchemeHint(line);
+    if(schLine && lastEx){
+      const key = lastEx.toLowerCase();
+      const ex = byKey.get(key);
+      if(ex){
+        ex.schemeHint = schLine.schemeHint || ex.schemeHint;
+        if(schLine.autoReps != null) ex.autoReps = schLine.autoReps;
+      }
+      continue;
+    }
+
+    // Detectar "línea de ejercicio" (Back Squat, Peso Muerto Rumano, Dead Bug 10/10, etc.)
+    // Evitamos cosas que empiezan por número (warmup tipo "8 Air Squat", "200 m Row suave")
+    if(/^\d+/.test(line)) continue;
+
+    const name = cleanExerciseName(line);
+    if(!name) continue;
+
+    // filtro extra para no meter frases raras
+    if(name.length < 3) continue;
+
+    upsert(name);
+    lastEx = name;
+    if(mode === "core") coreBuffer.push(name);
+  }
+
+  return out;
+}
 
     // --- Rest dentro de la línea (si existe) ---
     let suggestedRestSec = 0;
@@ -396,6 +534,14 @@ function renderDayExercises(){
       const wInput = document.getElementById("logWeight");
 
       if(exInput) exInput.value = ex.name;
+      const hint = document.getElementById("logSeriesHint");
+if(hint){
+  const parts = [];
+  if(ex.schemeHint) parts.push(`Plan: ${ex.schemeHint}`);
+  if(ex.restSec && ex.restSec > 0) parts.push(`Descanso: ${formatMMSS(ex.restSec)}`);
+  hint.textContent = parts.join(" · ");
+}
+
       const day = document.getElementById("logDay")?.value;
 const plan = state.days?.[day]?.planText || "";
 const { restMap, dayDefaultRest } = extractRestMapFromPlan(plan);
