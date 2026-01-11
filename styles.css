@@ -156,3 +156,21 @@ button.ghost{background:transparent}
   text-align: center;
   background: rgba(246,247,251,.9);
 }
+/* === REST TIMER FIX (contraste) === */
+#restDisplay, .restDisplay{
+  background: rgba(18,20,27,.65);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 12px;
+  text-align: center;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* En modo claro, un fondo claro pero texto oscuro */
+@media (prefers-color-scheme: light){
+  #restDisplay, .restDisplay{
+    background: rgba(246,247,251,.85);
+    color: #101828;
+  }
+}
