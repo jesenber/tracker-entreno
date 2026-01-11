@@ -1,4 +1,4 @@
-const CACHE = "tracker-cache-v1";
+const CACHE = "tracker-cache-v2";
 const ASSETS = [
   "./",
   "./index.html",
