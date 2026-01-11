@@ -127,3 +127,22 @@ button.ghost{background:transparent}
 }
 .formgrid label{font-size:13px; color:var(--muted); display:flex; flex-direction:column; gap:6px}
 .formgrid .span2{grid-column: span 2}
+.chipsRow{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.chipbtn{
+  border:1px solid var(--border);
+  background: rgba(246,247,251,.9);
+  color: var(--muted);
+  padding:8px 10px;
+  border-radius:999px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow: 0 1px 0 rgba(16, 24, 40, .03);
+}
+
+.chipbtn:hover{ box-shadow: var(--shadow-2); }
+.chipbtn:active{ transform: translateY(1px); }
